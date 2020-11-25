@@ -1,0 +1,4 @@
+FROM nginx
+COPY ./default.conf /etc/nginx/conf.d/default.conf
+
+# Don't have to have any run-commands for this, default command of parent ( nginx ) will be run. 

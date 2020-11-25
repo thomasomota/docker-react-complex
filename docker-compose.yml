@@ -1,0 +1,57 @@
+version: '3'
+services: 
+  postgres: 
+    image: 'postgres:latest'
+    environment:
+      - POSTGRES_PASSWORD=postgres_password 
+  redis: 
+    image: 'redis:latest'
+  nginx:  
+    depends_on:
+      - api
+      - client
+    restart: 
+      always   # Critical that this one stays running. Always try to restart. 
+    build:
+      dockerfile: Dockerfile.dev
+      context: './nginx'
+    ports:
+      - '3050:80'  # Open this port to the world! Everything else is fixed 'internally' by docker or nginx conf. 
+  api: 
+    build: 
+      dockerfile: Dockerfile.dev
+      context: './server'
+    volumes: 
+      - /app/node_modules # For node modules, look in the container
+      - ./server:/app # For everything else, use the refrence to the project. 
+    environment: 
+      - REDIS_HOST=redis # docker knows where to send the traffic when it sees this "url"
+      - REDIS_PORT=6379 # default port of redis, as seen on dockerhub. 
+      - PGUSER=postgres # Postgres values are all default, as seen on dockerhub.
+      - PGHOST=postgres
+      - PGDATABASE=postgres
+      - PGPASSWORD=postgres_password
+      - PGPORT=5432
+  client:
+    stdin_open: true
+    build: 
+      dockerfile: Dockerfile.dev
+      context: './client'
+    volumes: 
+      - /app/node_modules
+      - ./client:/app 
+  worker: 
+    build: 
+      dockerfile: Dockerfile.dev
+      context: './worker'
+    volumes: 
+      - /app/node_modules
+      - ./worker:/app 
+    environment: 
+      - REDIS_HOST=redis 
+      - REDIS_PORT=6379
+
+
+# NginX is working as the first/only entry point to our application architecture. 
+# It routes the two types of api calls, /api/values or /index.js ( react,web ) to each of the services. 
+# They are upstream servers. 
