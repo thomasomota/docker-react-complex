@@ -1,0 +1,30 @@
+sudo: required 
+service: 
+  - docker 
+
+before_install:
+  - docker build -t thomas/react-complex-test -f ./client/Dockerfile.dev ./client
+# Have to use the .dev dockerfile, as the prod image does not contain everything.
+
+# -- --coverage makes the test exit with code 0, if not it would be soft-locked as 
+# the test-cli is interactive.
+script: 
+  - docker run thomas/react-complex-test npm test -- --coverage
+
+
+# Building and push images to docker hub. 
+after_succss:
+  # Build images
+  - docker build -t thomas/react-complex-nginx ./nginx
+  - docker build -t thomas/react-complex-server ./server
+  - docker build -t thomas/react-complex-client ./client
+  - docker build -t thomas/react-complex-worker ./worker
+
+  # Log in to the docker CLI 
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
+  
+  # Push the images to docker hub
+  - docker push thomas/react-complex-nginx
+  - docker push thomas/react-complex-server
+  - docker push thomas/react-complex-client
+  - docker push thomas/react-complex-worker
